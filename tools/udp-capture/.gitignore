@@ -1,0 +1,4 @@
+.deps/
+replay-build/
+slime-recording-*/
+test-2s.jsonl

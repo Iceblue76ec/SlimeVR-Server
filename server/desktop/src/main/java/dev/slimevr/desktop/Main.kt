@@ -25,6 +25,7 @@ import dev.slimevr.desktop.platform.windows.WindowsNamedPipeBridge
 import dev.slimevr.desktop.platform.windows.WindowsNamedPipeRpcBridge
 import dev.slimevr.desktop.serial.DesktopSerialHandler
 import dev.slimevr.desktop.tracking.trackers.hid.DesktopHIDManager
+import dev.slimevr.desktop.tracking.trackers.hid.HIDRecordingReplay
 import dev.slimevr.tracking.trackers.Tracker
 import io.eiren.util.OperatingSystem
 import io.eiren.util.OperatingSystem.Companion.currentPlatform
@@ -171,10 +172,13 @@ fun main(args: Array<String>) {
 			configManager = configManager,
 		)
 		vrServer.start()
-		// Start service for USB HID trackers
-		DesktopHIDManager(
-			"Sensors HID service",
-		) { tracker: Tracker -> vrServer.registerTracker(tracker) }
+		// In replay mode, do not open real HID receivers alongside recorded data.
+		val replayPath = System.getenv("SLIMEVR_HID_REPLAY")?.takeIf { it.isNotBlank() }
+		if (replayPath != null) {
+			HIDRecordingReplay(replayPath) { tracker: Tracker -> vrServer.registerTracker(tracker) }.start()
+		} else {
+			DesktopHIDManager("Sensors HID service") { tracker: Tracker -> vrServer.registerTracker(tracker) }
+		}
 
 		Keybinding(vrServer)
 		val scanner = thread {
